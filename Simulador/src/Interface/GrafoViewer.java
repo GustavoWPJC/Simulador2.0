@@ -14,6 +14,8 @@ public class GrafoViewer extends JPanel implements Listener {
     private List<Edge> edges;
     private List<Semaforo> semaforos;
     private List<Carro> carros = List.of();
+    private int totalCarrosGerados = 10;
+
 
     private double minLat, maxLat, minLon, maxLon;
 
@@ -37,6 +39,11 @@ public class GrafoViewer extends JPanel implements Listener {
         }
     }
 
+    public void setTotalCarrosGerados(int total) {
+        this.totalCarrosGerados = total;
+    }
+
+
     public void setCarros(List<Carro> carros) {
         this.carros = carros;
     }
@@ -59,9 +66,9 @@ public class GrafoViewer extends JPanel implements Listener {
             Node target = getNodeById(edge.target);
             if (source != null && target != null) {
                 int x1 = (int)(((source.getLongitude() - minLon) / lonRange) * (panelWidth - 40)) + offsetX;
-                int y1 = (int)(((source.getLatitude() - minLat) / latRange) * (panelHeight - 40)) + offsetY;
+                int y1 = (int)(((maxLat - source.getLatitude()) / latRange) * (panelHeight - 40)) + offsetY;
                 int x2 = (int)(((target.getLongitude() - minLon) / lonRange) * (panelWidth - 40)) + offsetX;
-                int y2 = (int)(((target.getLatitude() - minLat) / latRange) * (panelHeight - 40)) + offsetY;
+                int y2 = (int)(((maxLat - target.getLatitude()) / latRange) * (panelHeight - 40)) + offsetY;
 
                 g.setColor(Color.GRAY);
                 ((Graphics2D) g).setStroke(new BasicStroke(2));
@@ -89,9 +96,9 @@ public class GrafoViewer extends JPanel implements Listener {
 
                 if (sourceNode != null && targetNode != null) {
                     int x1 = offsetX + (int)((sourceNode.getLongitude() - minLon) / lonRange * (panelWidth - 40));
-                    int y1 = offsetY + (int)((sourceNode.getLatitude() - minLat) / latRange * (panelHeight - 40));
+                    int y1 = offsetY + (int)((maxLat - sourceNode.getLatitude()) / latRange * (panelHeight - 40));
                     int x2 = offsetX + (int)((targetNode.getLongitude() - minLon) / lonRange * (panelWidth - 40));
-                    int y2 = offsetY + (int)((targetNode.getLatitude() - minLat) / latRange * (panelHeight - 40));
+                    int y2 = offsetY + (int)((maxLat - targetNode.getLatitude()) / latRange * (panelHeight - 40));
 
                     int x = (int)(x2 - 10 * Math.cos(Math.atan2(y2 - y1, x2 - x1)));
                     int y = (int)(y2 - 10 * Math.sin(Math.atan2(y2 - y1, x2 - x1)));
@@ -104,8 +111,36 @@ public class GrafoViewer extends JPanel implements Listener {
                         default: color = Color.GRAY; break;
                     }
 
-                    g.setColor(color);
-                    g.fillOval(x - 5, y - 5, 7, 7);
+                    Graphics2D g2d = (Graphics2D) g;
+                    g2d.setColor(color);
+                    g2d.setStroke(new BasicStroke(2));
+
+                    int tamanhoSeta = 15;
+                    double angulo = Math.atan2(y2 - y1, x2 - x1);
+
+// início da seta (um pouco recuado da extremidade da rua)
+                    int deslocamento = 25;
+                    int xInicio = (int)(x2 - deslocamento * Math.cos(angulo));
+                    int yInicio = (int)(y2 - deslocamento * Math.sin(angulo));
+
+
+// fim da seta (apontando para a rua controlada)
+                    int xFim = (int)(xInicio + tamanhoSeta * Math.cos(angulo));
+                    int yFim = (int)(yInicio + tamanhoSeta * Math.sin(angulo));
+
+// corpo da seta
+                    g2d.drawLine(xInicio, yInicio, xFim, yFim);
+
+// cabeça da seta (duas linhas diagonais)
+                    int arrowSize = 5;
+                    int xArrow1 = (int)(xFim - arrowSize * Math.cos(angulo - Math.PI / 6));
+                    int yArrow1 = (int)(yFim - arrowSize * Math.sin(angulo - Math.PI / 6));
+                    int xArrow2 = (int)(xFim - arrowSize * Math.cos(angulo + Math.PI / 6));
+                    int yArrow2 = (int)(yFim - arrowSize * Math.sin(angulo + Math.PI / 6));
+
+                    g2d.drawLine(xFim, yFim, xArrow1, yArrow1);
+                    g2d.drawLine(xFim, yFim, xArrow2, yArrow2);
+//teste semaforos seta
                 }
             }
         }
@@ -116,13 +151,18 @@ public class GrafoViewer extends JPanel implements Listener {
             double lat = carro.getLatitudeAtual();
 
             int x = (int)(((lon - minLon) / lonRange) * (panelWidth - 40)) + offsetX;
-            int y = (int)(((lat - minLat) / latRange) * (panelHeight - 40)) + offsetY;
+            int y = (int)(((maxLat - lat) / latRange) * (panelHeight - 40)) + offsetY;
 
             g.setColor(Color.ORANGE);
             g.fillRect(x - 5, y - 5, 10, 10);
             g.setColor(Color.BLACK);
             g.drawString(carro.getId(), x + 6, y);
         }
+
+
+        g.setColor(Color.BLACK);
+        g.drawString("Carros gerados: " + totalCarrosGerados, 10, 20);
+
     }
 
     private Node getNodeById(String id) {

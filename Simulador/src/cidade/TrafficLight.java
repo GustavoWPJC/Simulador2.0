@@ -32,7 +32,7 @@ public class TrafficLight {
         return attributes.getOrDefault("traffic_signals:direction", "forward");
     }
 
-
-
-
+    public Map<String, String> getAttributes() {
+        return attributes;
+    }
 }

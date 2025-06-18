@@ -5,6 +5,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.FileReader;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.swing.*;
 import javax.swing.Timer;
 
@@ -18,7 +19,7 @@ public class Main {
     public static void main(String[] args) {
         try {
             Gson gson = new Gson();
-            FileReader reader = new FileReader("Simulador/src/cidade/CentroTeresinaPiauíBrazil.json");
+            FileReader reader = new FileReader("Simulador/src/cidade/JoqueiTeresinaPiauíBrazil.json");
             GraphData graphData = gson.fromJson(reader, GraphData.class);
             reader.close();
 
@@ -27,20 +28,30 @@ public class Main {
             List<Semaforo> semaforos = new ArrayList<>();
             Set<Edge> ruasJaControladas = new HashSet<>();
 
+            final double comprimentoMinimo = 15.0;
+
+
             if (trafficLights != null) {
                 for (TrafficLight tl : trafficLights) {
-                    Node nodeMaisProximo = encontrarNodeMaisProximo(graphData.nodes, tl);
-                    if (nodeMaisProximo != null) {
-                        Edge ruaDisponivel = Semaforo.encontrarRuaDisponivel(graphData.edges, nodeMaisProximo, ruasJaControladas);
-                        if (ruaDisponivel != null) {
-                            semaforos.add(new Semaforo(nodeMaisProximo, ruaDisponivel));
-                            ruasJaControladas.add(ruaDisponivel);
-                        } else {
-                            System.out.println("Não há ruas disponíveis para semáforo no nó: " + nodeMaisProximo.getId());
+                    Node intersecao = encontrarNodeMaisProximo(graphData.nodes, tl);
+                    if (intersecao != null) {
+                        for (Edge rua : graphData.edges) {
+                            boolean chegaNaIntersecao = rua.target.equals(intersecao.getId());
+                            boolean aindaNaoTemSemaforo = !ruasJaControladas.contains(rua);
+                            boolean ruaNaoEhMuitoCurta = rua.length >= comprimentoMinimo;
+
+                            if (chegaNaIntersecao && aindaNaoTemSemaforo && ruaNaoEhMuitoCurta) {
+                                semaforos.add(new Semaforo(intersecao, rua));
+                                ruasJaControladas.add(rua);
+                            }
                         }
                     }
                 }
             }
+
+
+            AtomicInteger contador = new AtomicInteger(10); // ou só int se não usar lambda
+
 
             // ---------- 2. Grafo completo ----------
             Grafo<Node> grafo = new Grafo<>();
@@ -85,7 +96,7 @@ public class Main {
             frame.setVisible(true);
 
             // ---------- 6. Controladores e Simulador ----------
-            ControladorSemaforo controlador = new ControladorSemaforo(semaforos, grafoViewer);
+            ControladorSemaforo controlador = new ControladorSemaforo(semaforos, graphData.nodes, grafoViewer);
             Simulador simulador = new Simulador();
             simulador.registrarListener(grafoViewer);
             simulador.registrarListener(controlador);
@@ -108,16 +119,14 @@ public class Main {
             timerCarros.start();
 
             // ---------- 8. Geração automática de novos carros ----------
-            Timer timerGeradorCarros = new Timer(1000, new ActionListener() {
-                int contador = 10; // começa depois dos 10 iniciais
-
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    Carro novo = new Carro("C" + contador++, grafo, listaNodes);
-                    carros.add(novo);
-                    System.out.println("Novo carro gerado: " + novo.getId());
-                }
+            Timer timerGeradorCarros = new Timer(0001, e -> {
+                int id = contador.getAndIncrement(); // esse é o valor sequencial correto
+                Carro novo = new Carro("C" + id, grafo, listaNodes);
+                carros.add(novo);
+                grafoViewer.setTotalCarrosGerados(id + 1); // atualiza o número visível
+                System.out.println("Novo carro gerado: " + novo.getId());
             });
+
             timerGeradorCarros.start();
 
         } catch (Exception e) {
@@ -156,4 +165,7 @@ public class Main {
         double dLon = lon1 - lon2;
         return Math.sqrt(dLat * dLat + dLon * dLon);
     }
+
+
+
 }
