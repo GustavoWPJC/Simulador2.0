@@ -1,23 +1,23 @@
 package semaforo;
 
+import Estruturas.ListaEncadeada;
+import Estruturas.No;
 import Interface.GrafoViewer;
 import cidade.Edge;
 import cidade.Node;
 import listener.Listener;
-import semaforo.Semaforo;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class ControladorSemaforo implements Listener {
-    private List<Semaforo> semaforos;
+    private ListaEncadeada<Semaforo> semaforos;
     private GrafoViewer grafoViewer;
-    private Map<String, List<Semaforo>> gruposPorNode;
+    private Map<String, ListaEncadeada<Semaforo>> gruposPorNode;
     private List<Node> nodes; // adicione isso como atributo
 
-    public ControladorSemaforo(List<Semaforo> semaforos, List<Node> nodes, GrafoViewer grafoViewer) {
+    public ControladorSemaforo(ListaEncadeada<Semaforo> semaforos, List<Node> nodes, GrafoViewer grafoViewer) {
         this.semaforos = semaforos;
         this.nodes = nodes;
         this.grafoViewer = grafoViewer;
@@ -35,7 +35,9 @@ public class ControladorSemaforo implements Listener {
         boolean grupoAVerde = faseAtual < 4;
         boolean usandoAmarelo = faseAtual == 3 || faseAtual == 7;
 
-        for (Semaforo s : semaforos) {
+        No<Semaforo> atual = semaforos.getHead();
+        while (atual != null) {
+            Semaforo s = atual.getValor();
             boolean pertenceAoGrupoA = eVertical(s.getRuaControlada());
 
             if ((pertenceAoGrupoA && grupoAVerde) || (!pertenceAoGrupoA && !grupoAVerde)) {
@@ -47,20 +49,31 @@ public class ControladorSemaforo implements Listener {
             } else {
                 s.setEstado(Semaforo.Estado.VERMELHO);
             }
+
+            atual = atual.getProximo();
         }
 
         grafoViewer.repaint();
     }
 
 
-    private Map<String, List<Semaforo>> agruparPorNode(List<Semaforo> semaforos) {
-        Map<String, List<Semaforo>> mapa = new HashMap<>();
-        for (Semaforo s : semaforos) {
+    private Map<String, ListaEncadeada<Semaforo>> agruparPorNode(ListaEncadeada<Semaforo> semaforos) {
+        Map<String, ListaEncadeada<Semaforo>> mapa = new HashMap<>();
+        No<Semaforo> atual = semaforos.getHead();
+
+        while (atual != null) {
+            Semaforo s = atual.getValor();
             String nodeId = s.getNode().getId();
-            mapa.computeIfAbsent(nodeId, k -> new ArrayList<>()).add(s);
+
+            mapa.computeIfAbsent(nodeId, k -> new ListaEncadeada<>()).adicionar(s);
+
+            atual = atual.getProximo();
         }
+
         return mapa;
     }
+
+
 
     private boolean eVertical(Edge rua) {
         Node origem = getNodeById(rua.getSource());

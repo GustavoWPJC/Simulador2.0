@@ -1,5 +1,7 @@
 package Interface;
 
+import Estruturas.ListaEncadeada;
+import Estruturas.No;
 import cidade.Edge;
 import cidade.Node;
 import javax.swing.*;
@@ -10,16 +12,16 @@ import semaforo.Semaforo;
 import veiculos.Carro;
 
 public class GrafoViewer extends JPanel implements Listener {
-    private List<Node> nodes;
-    private List<Edge> edges;
-    private List<Semaforo> semaforos;
-    private List<Carro> carros = List.of();
+    private ListaEncadeada<Node> nodes;
+    private ListaEncadeada<Edge> edges;
+    private ListaEncadeada<Semaforo> semaforos;
+    private ListaEncadeada<Carro> carros = new ListaEncadeada<>();
     private int totalCarrosGerados = 10;
 
 
     private double minLat, maxLat, minLon, maxLon;
 
-    public GrafoViewer(List<Node> nodes, List<Edge> edges, List<Semaforo> semaforos) {
+    public GrafoViewer(ListaEncadeada<Node> nodes, ListaEncadeada<Edge> edges, ListaEncadeada<Semaforo> semaforos) {
         this.nodes = nodes;
         this.edges = edges;
         this.semaforos = semaforos;
@@ -31,12 +33,18 @@ public class GrafoViewer extends JPanel implements Listener {
         minLon = Double.MAX_VALUE;
         maxLon = -Double.MAX_VALUE;
 
-        for (Node node : nodes) {
+        No<Node> atual = nodes.getHead();
+        while (atual != null) {
+            Node node = atual.getValor();
+
             if (node.getLatitude() < minLat) minLat = node.getLatitude();
             if (node.getLatitude() > maxLat) maxLat = node.getLatitude();
             if (node.getLongitude() < minLon) minLon = node.getLongitude();
             if (node.getLongitude() > maxLon) maxLon = node.getLongitude();
+
+            atual = atual.getProximo();
         }
+
     }
 
     public void setTotalCarrosGerados(int total) {
@@ -44,7 +52,7 @@ public class GrafoViewer extends JPanel implements Listener {
     }
 
 
-    public void setCarros(List<Carro> carros) {
+    public void setCarros(ListaEncadeada<Carro> carros) {
         this.carros = carros;
     }
 
@@ -61,7 +69,10 @@ public class GrafoViewer extends JPanel implements Listener {
         double lonRange = maxLon - minLon;
 
         // Arestas
-        for (Edge edge : edges) {
+        No<Edge> atual = edges.getHead();
+        while (atual != null) {
+            Edge edge = atual.getValor();
+
             Node source = getNodeById(edge.source);
             Node target = getNodeById(edge.target);
             if (source != null && target != null) {
@@ -74,7 +85,10 @@ public class GrafoViewer extends JPanel implements Listener {
                 ((Graphics2D) g).setStroke(new BasicStroke(2));
                 g.drawLine(x1, y1, x2, y2);
             }
+
+            atual = atual.getProximo();
         }
+
 
         // Nós
         /*for (Node node : nodes) {
@@ -88,8 +102,11 @@ public class GrafoViewer extends JPanel implements Listener {
         }*/
 
         // Semáforos
-        for (Semaforo s : semaforos) {
+        No<Semaforo> atualSemaforo = semaforos.getHead();
+        while (atualSemaforo != null) {
+            Semaforo s = atualSemaforo.getValor();
             Edge rua = s.getRuaControlada();
+
             if (rua != null) {
                 Node sourceNode = getNodeById(rua.getSource());
                 Node targetNode = getNodeById(rua.getTarget());
@@ -118,20 +135,15 @@ public class GrafoViewer extends JPanel implements Listener {
                     int tamanhoSeta = 15;
                     double angulo = Math.atan2(y2 - y1, x2 - x1);
 
-// início da seta (um pouco recuado da extremidade da rua)
                     int deslocamento = 25;
                     int xInicio = (int)(x2 - deslocamento * Math.cos(angulo));
                     int yInicio = (int)(y2 - deslocamento * Math.sin(angulo));
 
-
-// fim da seta (apontando para a rua controlada)
                     int xFim = (int)(xInicio + tamanhoSeta * Math.cos(angulo));
                     int yFim = (int)(yInicio + tamanhoSeta * Math.sin(angulo));
 
-// corpo da seta
                     g2d.drawLine(xInicio, yInicio, xFim, yFim);
 
-// cabeça da seta (duas linhas diagonais)
                     int arrowSize = 5;
                     int xArrow1 = (int)(xFim - arrowSize * Math.cos(angulo - Math.PI / 6));
                     int yArrow1 = (int)(yFim - arrowSize * Math.sin(angulo - Math.PI / 6));
@@ -140,13 +152,16 @@ public class GrafoViewer extends JPanel implements Listener {
 
                     g2d.drawLine(xFim, yFim, xArrow1, yArrow1);
                     g2d.drawLine(xFim, yFim, xArrow2, yArrow2);
-//teste semaforos seta
                 }
             }
+
+            atualSemaforo = atualSemaforo.getProximo();
         }
 
         // Carros com posição contínua
-        for (Carro carro : carros) {
+        No<Carro> atualCarro = carros.getHead();
+        while (atualCarro != null) {
+            Carro carro = atualCarro.getValor();
             double lon = carro.getLongitudeAtual();
             double lat = carro.getLatitudeAtual();
 
@@ -157,7 +172,10 @@ public class GrafoViewer extends JPanel implements Listener {
             g.fillRect(x - 5, y - 5, 10, 10);
             g.setColor(Color.BLACK);
             g.drawString(carro.getId(), x + 6, y);
+
+            atualCarro = atualCarro.getProximo();
         }
+
 
 
         g.setColor(Color.BLACK);
@@ -166,13 +184,17 @@ public class GrafoViewer extends JPanel implements Listener {
     }
 
     private Node getNodeById(String id) {
-        for (Node node : nodes) {
+        No<Node> atual = nodes.getHead();
+        while (atual != null) {
+            Node node = atual.getValor();
             if (node.getId().equals(id)) {
                 return node;
             }
+            atual = atual.getProximo();
         }
         return null;
     }
+
 
     @Override
     public void aoDispararEvento(String tipo, Object dados) {
