@@ -8,9 +8,8 @@ import java.util.Set;
 
 public class Semaforo {
     private Node node;
-    private Edge ruaControlada;  // a rua (aresta) que ele controla!
+    private Edge ruaControlada;
     private Estado estado;
-
 
     public Semaforo(Node node, Edge ruaControlada) {
         this.node = node;
@@ -22,52 +21,82 @@ public class Semaforo {
         VERDE, AMARELO, VERMELHO
     }
 
+    public static Edge encontrarRuaPorDirecaoPreferencial(List<Edge> edges, Node node,
+                                                          Set<Edge> ruasJaControladas,
+                                                          String direcaoDesejada,
+                                                          List<Node> todosOsNodes) {
+        double alvo = direcaoEmGraus(direcaoDesejada);
+        if (alvo < 0) return encontrarRuaDisponivel(edges, node, ruasJaControladas); // fallback
 
-    public void alternarEstado(int tempo) {
-        int ciclo = tempo % 4; // ciclo total de 4 segundos
+        Edge melhorCandidata = null;
+        double menorDiferenca = 360;
 
-        if (ciclo == 0 || ciclo == 1) {  // segundos 0 e 1
-            estado = Estado.VERDE;
-        } else if (ciclo == 2) {          // segundo 2
-            estado = Estado.AMARELO;
-        } else {                         // segundo 3
-            estado = Estado.VERMELHO;
+        for (Edge e : edges) {
+            if (!ruasJaControladas.contains(e) &&
+                    (e.source.equals(node.getId()) || e.target.equals(node.getId()))) {
+
+                Node outro = e.source.equals(node.getId()) ?
+                        getNodeById(todosOsNodes, e.target) :
+                        getNodeById(todosOsNodes, e.source);
+
+                if (outro == null) continue;
+
+                double angulo = calcularDirecao(node, outro);
+                double diff = Math.abs(angulo - alvo);
+                if (diff > 180) diff = 360 - diff;
+
+                if (diff < menorDiferenca) {
+                    menorDiferenca = diff;
+                    melhorCandidata = e;
+                }
+            }
+        }
+        return melhorCandidata;
+    }
+
+    private static double calcularDirecao(Node a, Node b) {
+        double dx = b.getLongitude() - a.getLongitude();
+        double dy = b.getLatitude() - a.getLatitude();
+        double angulo = Math.toDegrees(Math.atan2(dy, dx));
+        return (angulo + 360) % 360;
+    }
+
+    private static double direcaoEmGraus(String dir) {
+        if (dir == null) return -1;
+        switch (dir.toLowerCase()) {
+            case "north": return 0;
+            case "east": return 90;
+            case "south": return 180;
+            case "west": return 270;
+            case "forward": return -1;
+            default: return -1;
         }
     }
 
+    private static Node getNodeById(List<Node> nodes, String id) {
+        for (Node node : nodes) {
+            if (node.id.equals(id)) {
+                return node;
+            }
+        }
+        return null;
+    }
 
     public static Edge encontrarRuaDisponivel(List<Edge> edges, Node node, Set<Edge> ruasJaControladas) {
         for (Edge e : edges) {
-            if ((e.source.equals(node.getId()) || e.target.equals(node.getId())) && !ruasJaControladas.contains(e)) {
-                return e;  // Rua disponível
+            if ((e.source.equals(node.getId()) || e.target.equals(node.getId())) &&
+                    !ruasJaControladas.contains(e)) {
+                return e;
             }
         }
-        return null;  // Não há rua disponível
+        return null;
     }
 
-
-    public Estado getEstado() {
-        return estado;
-    }
-
-
-    public Node getNode() {
-        return node;
-    }
-
-    public void setNode(Node node) {
-        this.node = node;
-    }
-
-    public Edge getRuaControlada() {
-        return ruaControlada;
-    }
-
-    public void setRuaControlada(Edge ruaControlada) {
-        this.ruaControlada = ruaControlada;
-    }
-
-    public void setEstado(Estado estado) {
-        this.estado = estado;
-    }
+    // Getters e setters
+    public Estado getEstado() { return estado; }
+    public Node getNode() { return node; }
+    public void setNode(Node node) { this.node = node; }
+    public Edge getRuaControlada() { return ruaControlada; }
+    public void setRuaControlada(Edge ruaControlada) { this.ruaControlada = ruaControlada; }
+    public void setEstado(Estado estado) { this.estado = estado; }
 }

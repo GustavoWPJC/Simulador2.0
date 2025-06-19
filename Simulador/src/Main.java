@@ -1,3 +1,4 @@
+import Estruturas.No;
 import Interface.GrafoViewer;
 import cidade.*;
 
@@ -5,6 +6,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.FileReader;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.swing.*;
 import javax.swing.Timer;
 
@@ -22,59 +24,78 @@ public class Main {
             GraphData graphData = gson.fromJson(reader, GraphData.class);
             reader.close();
 
-            // ---------- 1. Semáforos ----------
-            List<TrafficLight> trafficLights = graphData.trafficLights;
-            List<Semaforo> semaforos = new ArrayList<>();
-            Set<Edge> ruasJaControladas = new HashSet<>();
-
-            if (trafficLights != null) {
-                for (TrafficLight tl : trafficLights) {
-                    Node nodeMaisProximo = encontrarNodeMaisProximo(graphData.nodes, tl);
-                    if (nodeMaisProximo != null) {
-                        Edge ruaDisponivel = Semaforo.encontrarRuaDisponivel(graphData.edges, nodeMaisProximo, ruasJaControladas);
-                        if (ruaDisponivel != null) {
-                            semaforos.add(new Semaforo(nodeMaisProximo, ruaDisponivel));
-                            ruasJaControladas.add(ruaDisponivel);
-                        } else {
-                            System.out.println("Não há ruas disponíveis para semáforo no nó: " + nodeMaisProximo.getId());
-                        }
-                    }
-                }
-            }
-
-            // ---------- 2. Grafo completo ----------
-            Grafo<Node> grafo = new Grafo<>();
-            for (Node node : graphData.nodes) {
-                grafo.adicionarVertice(node);
-            }
-            for (Edge edge : graphData.edges) {
-                Node sourceNode = getNodeById(graphData.nodes, edge.source);
-                Node targetNode = getNodeById(graphData.nodes, edge.target);
-                if (sourceNode != null && targetNode != null) {
-                    grafo.adicionarAresta(edge.length, sourceNode, targetNode);
-                }
-            }
-
-            // ---------- 3. Converte nodes e semáforos para ListaEncadeada ----------
             ListaEncadeada<Node> listaNodes = new ListaEncadeada<>();
             for (Node n : graphData.nodes) {
                 listaNodes.adicionar(n);
             }
 
-            ListaEncadeada<Semaforo> listaSemaforos = new ListaEncadeada<>();
-            for (Semaforo s : semaforos) {
-                listaSemaforos.adicionar(s);
+            ListaEncadeada<Edge> listaEdges = new ListaEncadeada<>();
+            for (Edge e : graphData.edges) {
+                listaEdges.adicionar(e);
             }
 
-            // ---------- 4. Criação dos carros iniciais ----------
-            List<Carro> carros = new ArrayList<>();
+
+
+            // ---------- Semáforos ----------
+            List<TrafficLight> trafficLights = graphData.trafficLights;
+            ListaEncadeada<Semaforo> semaforos = new ListaEncadeada<>();
+            Set<Edge> ruasControladas = new HashSet<>();
+
+            final double comprimentoMinimo = 15.0;
+
+
+            if (trafficLights != null) {
+                for (TrafficLight tl : trafficLights) {
+                    Node intersecao = encontrarNodeMaisProximo(listaNodes, tl);
+                    if (intersecao != null) {
+                        No<Edge> atual = listaEdges.getHead();
+                        while (atual != null) {
+                            Edge rua = atual.getValor();
+
+                            boolean chegaNaIntersecao = rua.target.equals(intersecao.getId());
+                            boolean aindaNaoTemSemaforo = !ruasControladas.contains(rua);
+                            boolean ruaNaoEMuitoCurta = rua.length >= comprimentoMinimo;
+
+                            if (chegaNaIntersecao && aindaNaoTemSemaforo && ruaNaoEMuitoCurta) {
+                                semaforos.adicionar(new Semaforo(intersecao, rua));
+                                ruasControladas.add(rua);
+                            }
+
+                            atual = atual.getProximo();
+                        }
+                    }
+                }
+            }
+
+
+            AtomicInteger contador = new AtomicInteger(10); // ou só int se não usar lambda
+
+
+            // ----------  Grafo completo ----------
+            Grafo<Node> grafo = new Grafo<>();
+            for (Node node : graphData.nodes) {
+                grafo.adicionarVertice(node);
+            }
+
+            for (Edge edge : graphData.edges) {
+                Node sourceNode = getNodeById(listaNodes, edge.source);
+                Node targetNode = getNodeById(listaNodes, edge.target);
+                if (sourceNode != null && targetNode != null) {
+                    grafo.adicionarAresta(edge.length, sourceNode, targetNode);
+                }
+            }
+
+
+// ----------  Criação dos carros iniciais ----------
+            ListaEncadeada<Carro> carros = new ListaEncadeada<>();
             for (int i = 0; i < 10; i++) {
                 Carro carro = new Carro("C" + i, grafo, listaNodes);
-                carros.add(carro);
+                carros.adicionar(carro);
             }
 
-            // ---------- 5. Interface ----------
-            GrafoViewer grafoViewer = new GrafoViewer(graphData.nodes, graphData.edges, semaforos);
+
+            // ---------- Interface ----------
+            GrafoViewer grafoViewer = new GrafoViewer(listaNodes, listaEdges, semaforos);
             grafoViewer.setCarros(carros); // Adiciona os carros ao viewer
 
             JFrame frame = new JFrame("Simulação de Trânsito");
@@ -84,40 +105,48 @@ public class Main {
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);
 
-            // ---------- 6. Controladores e Simulador ----------
-            ControladorSemaforo controlador = new ControladorSemaforo(semaforos, grafoViewer);
+            // ---------- Controladores e Simulador ----------
+            ControladorSemaforo controlador = new ControladorSemaforo(semaforos, graphData.nodes, grafoViewer);
             Simulador simulador = new Simulador();
             simulador.registrarListener(grafoViewer);
             simulador.registrarListener(controlador);
             simulador.iniciar();
 
-            // ---------- 7. Atualização suave dos carros ----------
+            // ---------- Atualização suave dos carros ----------
             Timer timerCarros = new Timer(20, e -> {
-                for (int i = 0; i < carros.size(); i++) {
-                    Carro c = carros.get(i);
-                    c.atualizar(listaSemaforos);
+                No<Carro> atual = carros.getHead();
+                No<Carro> anterior = null;
 
+                while (atual != null) {
+                    Carro c = atual.getValor();
+                    c.atualizar(semaforos);
                     if (c.chegouAoDestino()) {
                         System.out.println("Removendo carro " + c.getId() + " (chegou ao destino)");
-                        carros.remove(i);
-                        i--; // Corrige o índice após remoção
+                        carros.remover(c);
+                        if (anterior == null) {
+                            atual = carros.getHead();
+                        } else {
+                            atual = anterior.getProximo();
+                        }
+                    } else {
+                        anterior = atual;
+                        atual = atual.getProximo();
                     }
                 }
-                grafoViewer.repaint(); // redesenha com novas posições
+
+                grafoViewer.repaint();
             });
             timerCarros.start();
 
-            // ---------- 8. Geração automática de novos carros ----------
-            Timer timerGeradorCarros = new Timer(1000, new ActionListener() {
-                int contador = 10; // começa depois dos 10 iniciais
-
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    Carro novo = new Carro("C" + contador++, grafo, listaNodes);
-                    carros.add(novo);
-                    System.out.println("Novo carro gerado: " + novo.getId());
-                }
+            // ---------- Geração automática de novos carros ----------
+            Timer timerGeradorCarros = new Timer(1000, e -> { // mudar o delay para mais ou menos carros aparecerem
+                int id = contador.getAndIncrement();
+                Carro novo = new Carro("C" + id, grafo, listaNodes);
+                carros.adicionar(novo);
+                grafoViewer.setTotalCarrosGerados(id + 1);
+                System.out.println("Novo carro gerado: " + novo.getId());
             });
+
             timerGeradorCarros.start();
 
         } catch (Exception e) {
@@ -127,29 +156,40 @@ public class Main {
 
     // -------------------- Funções auxiliares --------------------
 
-    private static Node getNodeById(List<Node> nodes, String id) {
-        for (Node node : nodes) {
+    private static Node getNodeById(ListaEncadeada<Node> nodes, String id) {
+        No<Node> atual = nodes.getHead();
+        while (atual != null) {
+            Node node = atual.getValor();
             if (node.id.equals(id)) {
                 return node;
             }
+            atual = atual.getProximo();
         }
         return null;
     }
 
-    private static Node encontrarNodeMaisProximo(List<Node> nodes, TrafficLight tl) {
+
+    private static Node encontrarNodeMaisProximo(ListaEncadeada<Node> nodes, TrafficLight tl) {
         Node maisProximo = null;
         double menorDistancia = Double.MAX_VALUE;
 
-        for (Node node : nodes) {
-            double distancia = calcularDistancia(node.getLatitude(), node.getLongitude(),
-                    tl.getLatitude(), tl.getLongitude());
+        No<Node> atual = nodes.getHead();
+        while (atual != null) {
+            Node node = atual.getValor();
+            double distancia = calcularDistancia(
+                    node.getLatitude(), node.getLongitude(),
+                    tl.getLatitude(), tl.getLongitude()
+            );
             if (distancia < menorDistancia) {
                 menorDistancia = distancia;
                 maisProximo = node;
             }
+            atual = atual.getProximo();
         }
+
         return maisProximo;
     }
+
 
     private static double calcularDistancia(double lat1, double lon1, double lat2, double lon2) {
         double dLat = lat1 - lat2;
