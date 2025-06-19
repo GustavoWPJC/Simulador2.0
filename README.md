@@ -1,6 +1,6 @@
 # 🚦 Simulador de Tráfego Urbano com Controle de Semáforos
 
-![Simulador de Tráfego Urbano](Documents/image.png)
+![Simulador de Tráfego Urbano](image.png)
 
 Este projeto é um simulador de tráfego urbano implementado em Java, que utiliza estruturas de grafos para representar o mapa da cidade, simula veículos em movimento e implementa controle inteligente de semáforos. O sistema é ideal para fins educacionais e experimentações com algoritmos de mobilidade urbana.
 
