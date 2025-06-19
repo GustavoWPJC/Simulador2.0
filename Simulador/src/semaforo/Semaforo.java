@@ -68,7 +68,7 @@ public class Semaforo {
             case "east": return 90;
             case "south": return 180;
             case "west": return 270;
-            case "forward": return -1; // Ignorado por enquanto
+            case "forward": return -1;
             default: return -1;
         }
     }

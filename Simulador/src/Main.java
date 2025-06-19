@@ -20,11 +20,10 @@ public class Main {
     public static void main(String[] args) {
         try {
             Gson gson = new Gson();
-            FileReader reader = new FileReader("Simulador/src/cidade/JoqueiTeresinaPiauíBrazil.json");
+            FileReader reader = new FileReader("Simulador/src/cidade/CentroTeresinaPiauíBrazil.json");
             GraphData graphData = gson.fromJson(reader, GraphData.class);
             reader.close();
 
-            // ---------- 1. Converte nodes e edges para ListaEncadeada ----------
             ListaEncadeada<Node> listaNodes = new ListaEncadeada<>();
             for (Node n : graphData.nodes) {
                 listaNodes.adicionar(n);
@@ -37,7 +36,7 @@ public class Main {
 
 
 
-            // ---------- 2. Semáforos ----------
+            // ---------- Semáforos ----------
             List<TrafficLight> trafficLights = graphData.trafficLights;
             ListaEncadeada<Semaforo> semaforos = new ListaEncadeada<>();
             Set<Edge> ruasControladas = new HashSet<>();
@@ -72,7 +71,7 @@ public class Main {
             AtomicInteger contador = new AtomicInteger(10); // ou só int se não usar lambda
 
 
-            // ---------- 3. Grafo completo ----------
+            // ----------  Grafo completo ----------
             Grafo<Node> grafo = new Grafo<>();
             for (Node node : graphData.nodes) {
                 grafo.adicionarVertice(node);
@@ -87,7 +86,7 @@ public class Main {
             }
 
 
-// ---------- 4. Criação dos carros iniciais ----------
+// ----------  Criação dos carros iniciais ----------
             ListaEncadeada<Carro> carros = new ListaEncadeada<>();
             for (int i = 0; i < 10; i++) {
                 Carro carro = new Carro("C" + i, grafo, listaNodes);
@@ -95,7 +94,7 @@ public class Main {
             }
 
 
-            // ---------- 5. Interface ----------
+            // ---------- Interface ----------
             GrafoViewer grafoViewer = new GrafoViewer(listaNodes, listaEdges, semaforos);
             grafoViewer.setCarros(carros); // Adiciona os carros ao viewer
 
@@ -106,14 +105,14 @@ public class Main {
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);
 
-            // ---------- 6. Controladores e Simulador ----------
+            // ---------- Controladores e Simulador ----------
             ControladorSemaforo controlador = new ControladorSemaforo(semaforos, graphData.nodes, grafoViewer);
             Simulador simulador = new Simulador();
             simulador.registrarListener(grafoViewer);
             simulador.registrarListener(controlador);
             simulador.iniciar();
 
-            // ---------- 7. Atualização suave dos carros ----------
+            // ---------- Atualização suave dos carros ----------
             Timer timerCarros = new Timer(20, e -> {
                 No<Carro> atual = carros.getHead();
                 No<Carro> anterior = null;
@@ -124,11 +123,10 @@ public class Main {
                     if (c.chegouAoDestino()) {
                         System.out.println("Removendo carro " + c.getId() + " (chegou ao destino)");
                         carros.remover(c);
-                        // Reajusta o ponteiro corretamente após remoção
                         if (anterior == null) {
-                            atual = carros.getHead(); // recomeça da nova head
+                            atual = carros.getHead();
                         } else {
-                            atual = anterior.getProximo(); // continua após a remoção
+                            atual = anterior.getProximo();
                         }
                     } else {
                         anterior = atual;
@@ -140,12 +138,12 @@ public class Main {
             });
             timerCarros.start();
 
-            // ---------- 8. Geração automática de novos carros ----------
-            Timer timerGeradorCarros = new Timer(100, e -> {
-                int id = contador.getAndIncrement(); // esse é o valor sequencial correto
+            // ---------- Geração automática de novos carros ----------
+            Timer timerGeradorCarros = new Timer(1000, e -> { // mudar o delay para mais ou menos carros aparecerem
+                int id = contador.getAndIncrement();
                 Carro novo = new Carro("C" + id, grafo, listaNodes);
                 carros.adicionar(novo);
-                grafoViewer.setTotalCarrosGerados(id + 1); // atualiza o número visível
+                grafoViewer.setTotalCarrosGerados(id + 1);
                 System.out.println("Novo carro gerado: " + novo.getId());
             });
 

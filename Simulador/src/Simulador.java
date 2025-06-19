@@ -12,15 +12,12 @@ public class Simulador implements Serializable {
     private int tempoSimulado = 0;
     private boolean pausado = false;
 
-    // Lista de ouvintes de eventos da simulação
     private ListaEncadeada<Listener> ouvintes = new ListaEncadeada<>();
 
-    // Registrar um ouvinte
     public void registrarListener(Listener listener) {
         ouvintes.adicionar(listener);
     }
 
-    // Disparar evento para todos os ouvintes
     private void notificar(String tipo, Object dados) {
         for (int i = 0; i < ouvintes.getTamanho(); i++) {
             Listener listener = ouvintes.pegar(i);
@@ -62,7 +59,7 @@ public class Simulador implements Serializable {
     public static Simulador carregar(String caminho) throws IOException, ClassNotFoundException {
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(caminho))) {
             Simulador sim = (Simulador) ois.readObject();
-            sim.timer = new Timer(); // recriar timer após desserialização
+            sim.timer = new Timer();
             return sim;
         }
     }

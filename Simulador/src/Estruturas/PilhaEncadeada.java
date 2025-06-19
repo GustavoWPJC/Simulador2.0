@@ -9,7 +9,6 @@ public class PilhaEncadeada<T> {
         this.tamanho = 0;
     }
 
-    // Empilha um elemento no topo
     public void empilhar(T valor) {
         No<T> novoNo = new No<>(valor);
         novoNo.setProximo(topo);
@@ -17,7 +16,6 @@ public class PilhaEncadeada<T> {
         tamanho++;
     }
 
-    // Desempilha o elemento do topo
     public T desempilhar() {
         if (estaVazia()) {
             throw new IllegalStateException("Pilha vazia! Não é possível desempilhar.");
@@ -37,23 +35,19 @@ public class PilhaEncadeada<T> {
         return topo.getValor();
     }
 
-    // Verifica se a pilha está vazia
     public boolean estaVazia() {
         return topo == null;
     }
 
-    // Retorna o tamanho da pilha
     public int tamanho() {
         return tamanho;
     }
 
-    // Esvazia a pilha
     public void limpar() {
         topo = null;
         tamanho = 0;
     }
 
-    // Representação em string da pilha (útil para debug)
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder("[");

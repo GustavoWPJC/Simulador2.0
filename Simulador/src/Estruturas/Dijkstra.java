@@ -15,7 +15,6 @@ public class Dijkstra {
         HashMap<Node, Node> anteriores = new HashMap<>();
         HashSet<Node> visitados = new HashSet<>();
 
-        // Inicialização com todos os nodes
         ListaEncadeada<Vertice<Node>> vertices = grafo.getVertices();
         for (int i = 0; i < vertices.getTamanho(); i++) {
             Node n = vertices.pegar(i).getDado();
@@ -24,7 +23,6 @@ public class Dijkstra {
         }
         distancias.put(origem, 0);
 
-        // Algoritmo principal
         while (visitados.size() < vertices.getTamanho()) {
             Node atual = encontrarMenorNode(distancias, visitados);
             if (atual == null) break;

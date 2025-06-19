@@ -15,7 +15,7 @@ public class ControladorSemaforo implements Listener {
     private ListaEncadeada<Semaforo> semaforos;
     private GrafoViewer grafoViewer;
     private Map<String, ListaEncadeada<Semaforo>> gruposPorNode;
-    private List<Node> nodes; // adicione isso como atributo
+    private List<Node> nodes;
 
     public ControladorSemaforo(ListaEncadeada<Semaforo> semaforos, List<Node> nodes, GrafoViewer grafoViewer) {
         this.semaforos = semaforos;

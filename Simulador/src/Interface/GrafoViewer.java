@@ -6,7 +6,6 @@ import cidade.Edge;
 import cidade.Node;
 import javax.swing.*;
 import java.awt.*;
-import java.util.List;
 import listener.Listener;
 import semaforo.Semaforo;
 import veiculos.Carro;
